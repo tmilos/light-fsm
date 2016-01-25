@@ -86,6 +86,22 @@ class StateMachine
         return $this->isSubState($this->currentState, $parentState);
     }
 
+    /**
+     * @return array Array of permitted events
+     */
+    public function getPermittedEvents()
+    {
+        $result = [];
+        foreach ($this->currentState->getAllTransitions() as $transition) {
+            $result[] = $transition->getEvent();
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return string
+     */
     public function toDotGraph()
     {
         $result = "digraph {\n";
