@@ -1,0 +1,27 @@
+{
+    "name": "tmilos/light-fsm",
+    "description": "Finite-state machine PHP library",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Milos Tomic",
+            "email": "tmilos@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-0": {
+            "LightFsm\\Tests\\": "tests/",
+            "LightFsm\\": "src/"
+        }
+    },
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "~4.8",
+        "satooshi/php-coveralls": "~0.6"
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
+    "minimum-stability": "stable"
+}
