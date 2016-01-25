@@ -1,5 +1,14 @@
 <?php
 
+/*
+ * This file is part of the light-fsm package.
+ *
+ * (c) Milos Tomic <tmilos@gmail.com>
+ *
+ * This source file is subject to the MIT license that is bundled
+ * with this source code in the file LICENSE.
+ */
+
 namespace LightFsm;
 
 class StateConfiguration
@@ -57,7 +66,7 @@ class StateConfiguration
      *
      * @return StateConfiguration
      */
-    public function setParentState($parentState)
+    public function subStateOf($parentState)
     {
         $this->parentState = $parentState;
 

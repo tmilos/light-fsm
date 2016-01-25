@@ -126,7 +126,7 @@ EOT;
             ->permit(self::EVENT_PLACE_ON_HOLD, self::STATE_ON_HOLD);
 
         $phoneCall->configure(self::STATE_ON_HOLD)
-            ->setParentState(self::STATE_CONNECTED)
+            ->subStateOf(self::STATE_CONNECTED)
             ->permit(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
 
         return $phoneCall;

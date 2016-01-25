@@ -63,7 +63,7 @@ class StateConfigurationTest extends \PHPUnit_Framework_TestCase
     {
         $config = new StateConfiguration('state');
         $this->assertNull($config->getParentState());
-        $config->setParentState($expected = 'parent');
+        $config->subStateOf($expected = 'parent');
         $this->assertEquals($expected, $config->getParentState());
     }
 
