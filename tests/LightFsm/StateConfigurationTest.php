@@ -113,7 +113,7 @@ class StateConfigurationTest extends \PHPUnit_Framework_TestCase
         $config->permit(1, '11');
         $config->permit(2, '22');
 
-        $transition = $config->getTransition(2);
+        $transition = $config->getTransition(2, null);
         $this->assertNotNull($transition);
         $this->assertEquals($state, $transition->getState());
         $this->assertEquals(2, $transition->getEvent());

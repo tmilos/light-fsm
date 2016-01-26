@@ -17,9 +17,9 @@ class StateConfiguration
     private $state;
 
     /**
-     * @var TransitionConfiguration[] event => TransitionConfiguration
+     * @var EventConfiguration[] event => EventConfiguration
      */
-    private $transitions = [];
+    private $events = [];
 
     /** @var callable[] */
     private $entryCallbacks = [];
@@ -56,7 +56,8 @@ class StateConfiguration
      */
     public function permit($event, $nextState, $guardCallback = null, $guardName = null)
     {
-        $this->transitions[$event] = new TransitionConfiguration($this->state, $event, $nextState, $guardCallback, $guardName);
+        $eventConfiguration = $this->getEventConfiguration($event);
+        $eventConfiguration->addTransition($this->state, $event, $nextState, $guardCallback, $guardName);
 
         return $this;
     }
@@ -117,12 +118,13 @@ class StateConfiguration
 
     /**
      * @param string|int $event
+     * @param mixed      $data
      *
      * @return TransitionConfiguration|null
      */
-    public function getTransition($event)
+    public function getTransition($event, $data)
     {
-        return isset($this->transitions[$event]) ? $this->transitions[$event ] : null;
+        return $this->getEventConfiguration($event)->getTransition($data);
     }
 
     /**
@@ -130,7 +132,12 @@ class StateConfiguration
      */
     public function getAllTransitions()
     {
-        return $this->transitions;
+        $result = [];
+        foreach ($this->events as $eventConfiguration) {
+            $result = array_merge($result, $eventConfiguration->getAllTransitions());
+        }
+
+        return $result;
     }
 
     /**
@@ -169,5 +176,19 @@ class StateConfiguration
     public function getAllExitCallbacks()
     {
         return $this->exitCallbacks;
+    }
+
+    /**
+     * @param string|int $event
+     *
+     * @return EventConfiguration
+     */
+    private function getEventConfiguration($event)
+    {
+        if (false === isset($this->events[$event])) {
+            $this->events[$event] = new EventConfiguration($event);
+        }
+
+        return $this->events[$event];
     }
 }

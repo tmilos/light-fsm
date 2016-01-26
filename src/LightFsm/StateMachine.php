@@ -13,8 +13,8 @@ namespace LightFsm;
 
 class StateMachine
 {
-    /** @var StateConfiguration */
-    private $currentState;
+    /** @var callable */
+    private $stateCallable;
 
     /** @var StateConfiguration[] */
     private $states = [];
@@ -28,9 +28,30 @@ class StateMachine
      */
     public function __construct($initialState, $changeCallback = null)
     {
-        $state = is_callable($initialState) ? call_user_func($initialState) : $initialState;
-        $this->states[$state] = $this->currentState = new StateConfiguration($state);
-        $this->changeCallback = $changeCallback;
+        if (is_callable($initialState) && is_callable($changeCallback)) {
+            $this->stateCallable = $initialState;
+            $this->changeCallback = $changeCallback;
+        } else {
+            $state = $initialState;
+            if (is_callable($initialState)) {
+                $state = call_user_func($initialState);
+            }
+
+            $stateReference = new StateReference($state);
+
+            $this->stateCallable = function () use ($stateReference) {
+                return $stateReference->getState();
+            };
+            $this->changeCallback = function ($state) use ($stateReference, $changeCallback) {
+                $stateReference->setState($state);
+                if (is_callable($changeCallback)) {
+                    call_user_func($changeCallback, $state);
+                }
+            };
+            if (false === is_callable($initialState) && is_callable($changeCallback)) {
+                call_user_func($changeCallback, $state);
+            }
+        }
     }
 
     /**
@@ -49,21 +70,25 @@ class StateMachine
      */
     public function fire($event, $data = null)
     {
-        $transition = $this->currentState->getTransition($event);
-        if (null === $transition) {
-            return;
-        }
+        $state = $this->_retrieveCurrentState();
 
-        if ($transition->getGuardCallback()) {
-            $ok = call_user_func($transition->getGuardCallback(), $data);
-            if (!$ok) {
-                return;
+        while ($state) {
+            $transition = $state->getTransition($event, $data);
+            if ($transition) {
+                $nextState = $this->getState($transition->getNextState());
+                $this->transition($state, $nextState, $data);
+
+                break;
+            }
+
+            if ($state->getParentState()) {
+                $state = $this->getState($state->getParentState());
+            } else {
+                $state = null;
+
+                break;
             }
         }
-
-        $nextState = $this->getState($transition->getNextState());
-
-        $this->transition($this->currentState, $event, $nextState, $data);
     }
 
     /**
@@ -71,7 +96,7 @@ class StateMachine
      */
     public function getCurrentState()
     {
-        return $this->currentState->getState();
+        return $this->_retrieveCurrentState()->getState();
     }
 
     /**
@@ -83,7 +108,7 @@ class StateMachine
     {
         $parentState = $this->getState($state);
 
-        return $this->isSubState($this->currentState, $parentState);
+        return $this->isSubState($this->_retrieveCurrentState(), $parentState);
     }
 
     /**
@@ -92,11 +117,20 @@ class StateMachine
     public function getPermittedEvents()
     {
         $result = [];
-        foreach ($this->currentState->getAllTransitions() as $transition) {
-            $result[] = $transition->getEvent();
+        $state = $this->_retrieveCurrentState();
+        while ($state) {
+            foreach ($state->getAllTransitions() as $transition) {
+                $result[$transition->getEvent()] = $transition->getEvent();
+            }
+
+            if ($state->getParentState()) {
+                $state = $this->getState($state->getParentState());
+            } else {
+                $state = null;
+            }
         }
 
-        return $result;
+        return array_keys($result);
     }
 
     /**
@@ -181,20 +215,37 @@ class StateMachine
 
     /**
      * @param StateConfiguration $previousState
-     * @param string|int         $event
      * @param StateConfiguration $nextState
      * @param mixed              $data
      */
-    private function transition(StateConfiguration $previousState, $event, StateConfiguration $nextState, $data)
+    private function transition(StateConfiguration $previousState, StateConfiguration $nextState, $data)
     {
-        $isSubState = $this->isSubState($this->currentState, $nextState);
+        if ($previousState->getState() == $nextState->getState()) {
+            return;
+        }
+
+        $isSubState = $this->isSubState($this->_retrieveCurrentState(), $nextState);
 
         $previousState->triggerExit($isSubState, $data);
-        $this->currentState = $nextState;
+        $this->_storeCurrentState($nextState->getState());
         $nextState->triggerEntry($isSubState, $data);
+    }
 
-        if ($this->changeCallback) {
-            call_user_func($this->changeCallback, $nextState->getState(), $event, $previousState->getState(), $isSubState, $data);
-        }
+    /**
+     * @return StateConfiguration
+     */
+    private function _retrieveCurrentState()
+    {
+        $state = call_user_func($this->stateCallable);
+
+        return $this->getState($state);
+    }
+
+    /**
+     * @param string|int $state
+     */
+    private function _storeCurrentState($state)
+    {
+        call_user_func($this->changeCallback, $state);
     }
 }

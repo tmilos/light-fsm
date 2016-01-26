@@ -8,6 +8,7 @@ class PhoneCallTest extends \PHPUnit_Framework_TestCase
 {
     const STATE_OFF_HOOK = 'off-hook';
     const STATE_RINGING = 'ringing';
+    const STATE_BEEPING = 'beeping';
     const STATE_CONNECTED = 'connected';
     const STATE_ON_HOLD = 'on-hold';
 
@@ -41,33 +42,40 @@ class PhoneCallTest extends \PHPUnit_Framework_TestCase
     {
         $this->assertEquals(self::STATE_OFF_HOOK, $this->stateMachine->getCurrentState());
 
-        $this->fireAndAssertState(self::EVENT_CALL_DIALED, self::STATE_OFF_HOOK, 'invalid');
-        $this->fireAndAssertState(self::EVENT_CALL_DIALED, self::STATE_RINGING, 'valid-number');
-
-        $this->fireAndAssertState(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
-
-        $this->fireAndAssertState(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
-        usleep(100000); // 0.1 second call duration
-
-        $this->fireAndAssertState(self::EVENT_PLACE_ON_HOLD, self::STATE_ON_HOLD);
-        $this->assertTrue($this->stateMachine->isInState(self::STATE_CONNECTED));
-
-        $this->fireAndAssertState(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
-
+        $this->fireAndAssertState(self::EVENT_CALL_DIALED, self::STATE_BEEPING, 'invalid');
         $this->fireAndAssertState(self::EVENT_HUNG_UP, self::STATE_OFF_HOOK);
 
-        $this->assertGreaterThan(0, $this->startTime);
-        $this->assertGreaterThan(0, $this->endTime);
+        $this->fireAndAssertState(self::EVENT_CALL_DIALED, self::STATE_RINGING, '123-valid-number');
+        $this->fireAndAssertState(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
+        usleep(100000); // 0.1 second call duration
+        $this->fireAndAssertState(self::EVENT_PLACE_ON_HOLD, self::STATE_ON_HOLD);
+        $this->assertTrue($this->stateMachine->isInState(self::STATE_CONNECTED));
+        $this->fireAndAssertState(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
+        $this->fireAndAssertState(self::EVENT_HUNG_UP, self::STATE_OFF_HOOK);
+        $this->assertCallDuration(0.098);
 
-        $duration = $this->endTime - $this->startTime;
-        $this->assertGreaterThanOrEqual(0.098, $duration);
+        $this->fireAndAssertState(self::EVENT_CALL_DIALED, self::STATE_RINGING, '123-valid-number');
+        $this->fireAndAssertState(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
+        usleep(100000); // 0.1 second call duration
+        $this->fireAndAssertState(self::EVENT_PLACE_ON_HOLD, self::STATE_ON_HOLD);
+        $this->fireAndAssertState(self::EVENT_HUNG_UP, self::STATE_OFF_HOOK);
+        $this->assertCallDuration(0.098);
 
         $this->assertEquals([
+            self::STATE_OFF_HOOK,
+            self::STATE_BEEPING,
+            self::STATE_OFF_HOOK,
+
             self::STATE_RINGING,
             self::STATE_CONNECTED,
             self::STATE_ON_HOLD,
             self::STATE_CONNECTED,
-            self::STATE_OFF_HOOK
+            self::STATE_OFF_HOOK,
+
+            self::STATE_RINGING,
+            self::STATE_CONNECTED,
+            self::STATE_ON_HOLD,
+            self::STATE_OFF_HOOK,
         ], $this->stateLog);
     }
 
@@ -76,7 +84,9 @@ class PhoneCallTest extends \PHPUnit_Framework_TestCase
         $actual = str_replace("\r", '', trim($this->stateMachine->toDotGraph()));
         $expected = <<<EOT
 digraph {
-    "off-hook" -> "ringing" [label="call-dialed [IsNumberValid]"];
+    "off-hook" -> "ringing" [label="call-dialed [Number is valid]"];
+    "off-hook" -> "beeping" [label="call-dialed [Number is in-valid]"];
+    "beeping" -> "off-hook" [label="hang-up"];
     "ringing" -> "off-hook" [label="hang-up"];
     "ringing" -> "connected" [label="call-connected"];
     "connected" -> "off-hook" [label="hang-up"];
@@ -90,6 +100,27 @@ EOT;
         $expected = str_replace("\r", '', trim($expected));
 
         $this->assertEquals($expected, $actual);
+    }
+
+    public function test_permitted_events()
+    {
+        $this->assertEquals([self::EVENT_CALL_DIALED], $this->stateMachine->getPermittedEvents());
+
+        $this->fireAndAssertState(self::EVENT_CALL_DIALED, self::STATE_RINGING, '123-valid');
+        $this->assertEquals([self::EVENT_HUNG_UP, self::EVENT_CALL_CONNECTED], $this->stateMachine->getPermittedEvents());
+
+        $this->fireAndAssertState(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
+        $this->assertEquals([self::EVENT_HUNG_UP, self::EVENT_PLACE_ON_HOLD], $this->stateMachine->getPermittedEvents());
+
+        $this->fireAndAssertState(self::EVENT_PLACE_ON_HOLD, self::STATE_ON_HOLD);
+        $this->assertEquals([self::EVENT_CALL_CONNECTED, self::EVENT_HUNG_UP, self::EVENT_PLACE_ON_HOLD], $this->stateMachine->getPermittedEvents());
+
+        $this->fireAndAssertState(self::EVENT_CALL_CONNECTED, self::STATE_CONNECTED);
+        $this->assertEquals([self::EVENT_HUNG_UP, self::EVENT_PLACE_ON_HOLD], $this->stateMachine->getPermittedEvents());
+
+        $this->fireAndAssertState(self::EVENT_HUNG_UP, self::STATE_OFF_HOOK);
+        $this->assertEquals([self::EVENT_CALL_DIALED], $this->stateMachine->getPermittedEvents());
+
     }
 
     /**
@@ -113,7 +144,15 @@ EOT;
         $phoneCall = new StateMachine(self::STATE_OFF_HOOK, $changeCallback);
 
         $phoneCall->configure(self::STATE_OFF_HOOK)
-            ->permit(self::EVENT_CALL_DIALED, self::STATE_RINGING, [$this, 'isNumberValid'], 'IsNumberValid');
+            ->permit(self::EVENT_CALL_DIALED, self::STATE_RINGING, function($data) {
+                return $this->isNumberValid($data);
+            }, 'Number is valid')
+            ->permit(self::EVENT_CALL_DIALED, self::STATE_BEEPING, function($data) {
+                return !$this->isNumberValid($data);
+            }, 'Number is in-valid');
+
+        $phoneCall->configure(self::STATE_BEEPING)
+            ->permit(self::EVENT_HUNG_UP, self::STATE_OFF_HOOK);
 
         $phoneCall->configure(self::STATE_RINGING)
             ->permit(self::EVENT_HUNG_UP, self::STATE_OFF_HOOK)
@@ -132,9 +171,32 @@ EOT;
         return $phoneCall;
     }
 
+    /**
+     * @param float $expectedDuration
+     *
+     * @return float
+     */
+    private function assertCallDuration($expectedDuration)
+    {
+        $this->assertGreaterThan(0, $this->startTime);
+        $this->assertGreaterThan(0, $this->endTime);
+
+        $duration = $this->endTime - $this->startTime;
+        $this->assertGreaterThan($expectedDuration, $duration);
+
+        $this->startTime = $this->endTime = 0;
+
+        return $duration;
+    }
+
+    /**
+     * @param string $data
+     *
+     * @return bool
+     */
     public function isNumberValid($data)
     {
-        return 'valid-number' === $data;
+        return substr($data, 0, 3) === '123';
     }
 
     /**
