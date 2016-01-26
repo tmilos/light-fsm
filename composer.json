@@ -1,7 +1,7 @@
 {
     "name": "tmilos/light-fsm",
-    "description": "Light and simple finite state machine with nice API for automatic workflow and external state",
-    "keywords": ["fsm", "finite state machine", "state machine", "statemachine", "workflow", "external state"],
+    "description": "Light and simple finite state machine with nice API for automatic workflow and external state, with export to dot feature",
+    "keywords": ["fsm", "finite state machine", "state machine", "statemachine", "workflow", "external state", "export to dot", "dot"],
     "type": "library",
     "license": "MIT",
     "authors": [
