@@ -8,7 +8,6 @@
 Finite-state machine FSM PHP library. Create state machines and lightweight state machine-based workflows directly in PHP code.
 
 ```php
-<?php
 $phoneCall = new StateMachine(State::OFF_HOOK);
 
 $phoneCall->configure(State::OFF_HOOK)
@@ -54,7 +53,6 @@ listeners, so they can base their logic based on it.
 In the example below, the ``ON_HOLD`` state is a substate of the ``CONNECTED`` state. This means that an ``ON_HOLD`` call is still connected.
 
 ```php
-<?php
 $phoneCall->configure(State::ON_HOLD)
     ->subStateOf(State::CONNECTED)
     ->permit(Event::CALL_CONNECTED, State::CONNECTED);
@@ -80,17 +78,23 @@ In order to listen for state changes for persistence purposes, for example with 
 to the ``StateMachine`` constructor.
 
 ```php
-<?php
+$stateObject = $orm-find();
+
 $stateMachine = new StateMachine(
-    function() use ($stateObject) {
+    function () use ($stateObject) {
         return $stateObject->getValue();
     },
-    function($state) use ($stateObject) {
+    function ($state) use ($stateObject) {
         $stateObject->setValue($state);
         $orm->persist($stateObject);
     }
 );
 ```
+
+In this case, when ``StateMachine`` is constructed with two callbacks, the state is held totaly external, and each time 
+``StateMachine`` needs current state, the first callback will be called, and each time the state changes, the second callback
+will be called.
+
 
 ## Introspection
 
@@ -103,10 +107,9 @@ the ``StateMachine::getPermittedTriggers()`` method.
 The state machine will choose between multiple transitions based on guard clauses, e.g.:
 
 ```php
-<?php
 $phoneCall->configure(State::OFF_HOOK)
-    .permit(Trigger::CALL_DIALLED, State::RINGING, function($data) { return IsValidNumber($data); })
-    .permit(Trigger::CALL_DIALLED, State::BEEPING, function($data) { return !IsValidNumber($data); });
+    .permit(Trigger::CALL_DIALLED, State::RINGING, function ($data) { return IsValidNumber($data); })
+    .permit(Trigger::CALL_DIALLED, State::BEEPING, function ($data) { return !IsValidNumber($data); });
 ```
 
 ## Export to DOT graph
@@ -115,13 +118,12 @@ It can be useful to visualize state machines on runtime. With this approach the 
 are by-products which are always up to date.
 
 ```php
-<?php
 $phoneCall->configure(State::OFF_HOOK)
     .permit(Trigger::CALL_DIALED, State::RINGING, 'IsValidNumber');
-string graph = phoneCall.toDotGraph();
+$graph = phoneCall->toDotGraph();
 ```
 
-The ``StateMachine.toDotGraph()`` method returns a string representation of the state machine in the
+The ``StateMachine::toDotGraph()`` method returns a string representation of the state machine in the
 [DOT graph language](https://en.wikipedia.org/wiki/DOT_(graph_description_language)), e.g.:
 
 ```
