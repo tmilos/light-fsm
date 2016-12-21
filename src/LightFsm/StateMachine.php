@@ -227,7 +227,7 @@ class StateMachine
         $isSubState = $this->isSubState($this->retrieveCurrentState(), $nextState);
 
         $previousState->triggerExit($isSubState, $data);
-        $this->_storeCurrentState($nextState->getState());
+        $this->storeCurrentState($nextState->getState());
         $nextState->triggerEntry($isSubState, $data);
     }
 
@@ -244,7 +244,7 @@ class StateMachine
     /**
      * @param string|int $state
      */
-    private function _storeCurrentState($state)
+    private function storeCurrentState($state)
     {
         call_user_func($this->changeCallback, $state);
     }
