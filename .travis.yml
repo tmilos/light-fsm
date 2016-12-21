@@ -13,8 +13,8 @@ matrix:
 before_install:
     - composer self-update
     - composer --version
-    - wget http://get.sensiolabs.org/php-cs-fixer.phar -O php-cs-fixer.phar
-    - php php-cs-fixer.phar --version
+    - if [ "$TRAVIS_PHP_VERSION" == "7.0" ]; then wget http://get.sensiolabs.org/php-cs-fixer.phar -O php-cs-fixer.phar; fi
+    - if [ "$TRAVIS_PHP_VERSION" == "7.0" ]; then php php-cs-fixer.phar --version; fi
 
 install:
     - COMPOSER_ROOT_VERSION=dev-master composer update --prefer-source $COMPOSER_FLAGS
