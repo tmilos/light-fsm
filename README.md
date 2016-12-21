@@ -5,6 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/tmilos/light-fsm/badge.svg?branch=master)](https://coveralls.io/github/tmilos/light-fsm?branch=master)
 [![HHVM Status](http://hhvm.h4cc.de/badge/tmilos/light-fsm.svg?style=flat)](http://hhvm.h4cc.de/package/tmilos/light-fsm)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/tmilos/light-fsm/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/tmilos/light-fsm/?branch=master)
+[![SensioLabsInsight](https://insight.sensiolabs.com/projects/4b6faf79-0b6c-49c1-afc5-c00609835ca0/small.png)](https://insight.sensiolabs.com/projects/4b6faf79-0b6c-49c1-afc5-c00609835ca0)
 
 Finite-state machine FSM PHP library. Create state machines and lightweight state machine-based workflows directly in PHP code.
 

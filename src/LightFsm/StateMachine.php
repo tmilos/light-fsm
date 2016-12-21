@@ -70,7 +70,7 @@ class StateMachine
      */
     public function fire($event, $data = null)
     {
-        $state = $this->_retrieveCurrentState();
+        $state = $this->retrieveCurrentState();
 
         while ($state) {
             $transition = $state->getTransition($event, $data);
@@ -96,7 +96,7 @@ class StateMachine
      */
     public function getCurrentState()
     {
-        return $this->_retrieveCurrentState()->getState();
+        return $this->retrieveCurrentState()->getState();
     }
 
     /**
@@ -108,7 +108,7 @@ class StateMachine
     {
         $parentState = $this->getState($state);
 
-        return $this->isSubState($this->_retrieveCurrentState(), $parentState);
+        return $this->isSubState($this->retrieveCurrentState(), $parentState);
     }
 
     /**
@@ -117,7 +117,7 @@ class StateMachine
     public function getPermittedEvents()
     {
         $result = [];
-        $state = $this->_retrieveCurrentState();
+        $state = $this->retrieveCurrentState();
         while ($state) {
             foreach ($state->getAllTransitions() as $transition) {
                 $result[$transition->getEvent()] = $transition->getEvent();
@@ -224,7 +224,7 @@ class StateMachine
             return;
         }
 
-        $isSubState = $this->isSubState($this->_retrieveCurrentState(), $nextState);
+        $isSubState = $this->isSubState($this->retrieveCurrentState(), $nextState);
 
         $previousState->triggerExit($isSubState, $data);
         $this->_storeCurrentState($nextState->getState());
@@ -234,7 +234,7 @@ class StateMachine
     /**
      * @return StateConfiguration
      */
-    private function _retrieveCurrentState()
+    private function retrieveCurrentState()
     {
         $state = call_user_func($this->stateCallable);
 
